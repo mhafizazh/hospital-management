@@ -1,96 +1,93 @@
 from flask import Flask
+from flask_mongoengine import MongoEngine
 
 app = Flask(__name__)
+app.config['MONGODB_SETTINGS'] = {
+    'db': 'your_database_name',
+    'host': 'mongodb://localhost/your_database_name'
+}
 
-class Hospital:
-    def __init__(self, name_hospital, postal_code):
-        self.name_hospital = name_hospital
-        self.postal_code = postal_code
-        self.doctors = {}
+db = MongoEngine()
+db.init_app(app)
 
-    class Doctor:
-        def __init__(self, name_doctor: str):
-            self.name_doctor = name_doctor
-            self.time_available = {
-                "Monday": [],
-                "Tuesday": [],
-                "Wednesday": [],
-                "Thursday": [],
-                "Friday": [],
-                "Saturday": [],
-                "Sunday": [],
-            }
-            self.schedule = []
-            self.operations = []
-            self.urgency = 0
+class Hospital(db.Document):
+    name_hospital = db.StringField(required=True)
+    postal_code = db.StringField(required=True)
+    # Add other relevant fields and relationships
 
-        def add_time(self, day: str, hours: list) -> None:
-            if day in self.time_available:
-                valid_hours = [hour for hour in hours if 1 <= hour <= 24]
-                self.time_available[day].extend(valid_hours)
+class Doctor(db.Document):
+    name_doctor = db.StringField(required=True)
+    time_available = db.DictField()
+    operations = db.ListField(db.ReferenceField('Task'))
+    urgency = db.FloatField(default=0.0)
 
-        def remove_time(self, day: str, hours: list) -> None:
-            if day in self.time_available:
-                self.time_available[day] = [hour for hour in self.time_available[day] if hour not in hours]
+    def add_time(self, day: str, hours: list) -> None:
+        if day in self.time_available:
+            valid_hours = [hour for hour in hours if 1 <= hour <= 24]
+            self.time_available[day].extend(valid_hours)
 
-        def add_to_schedule(self, task):
-            self.schedule.append(task)
+    def remove_time(self, day: str, hours: list) -> None:
+        if day in self.time_available:
+            self.time_available[day] = [hour for hour in self.time_available[day] if hour not in hours]
 
-        def add_operation(self, operation):
-            self.operations.append(operation)
-            self.urgency = max(self.urgency, operation.urgency)
+    def add_operation(self, operation, urgency):
+        self.operations.append(operation)
+        self.urgency = max(self.urgency, urgency)
 
-class Patient:
-    def __init__(self, first_name, last_name, age, gender, symptoms, urgency_rating):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.age = age
-        self.gender = gender
-        self.symptoms = symptoms
-        self.urgency_rating = urgency_rating
+class Patient(db.Document):
+    first_name = db
+    last_name = db.StringField(required=True)
+    age = db.IntField()
+    gender = db.StringField()
+    symptoms = db.StringField()
+    ml_urgency_rating = db.FloatField(default=0.0)  # Rating from ML model
 
-class Task:
-    def __init__(self, patient, day, hour):
+    def set_ml_urgency(self, rating):
+        self.ml_urgency_rating = rating
+
+class Task(db.Document):
+    patient = db.ReferenceField(Patient)
+    day = db.StringField(required=True)
+    hour = db.IntField(required=True)
+    is_operation = db.BooleanField(default=False)
+    urgency = db.FloatField()
+
+    def __init__(self, patient, day, hour, is_operation=False, *args, **values):
+        super().__init__(*args, **values)
         self.patient = patient
-        self.urgency = patient.urgency_rating
         self.day = day
         self.hour = hour
+        self.is_operation = is_operation
+        self.urgency = patient.ml_urgency_rating if not is_operation else None
 
 def schedule_tasks(hospital, tasks):
-    tasks.sort(key=lambda x: x.urgency, reverse=True)
-
     for task in tasks:
-        for doctor in hospital.doctors.values():
-            if task.hour in doctor.time_available[task.day]:
-                doctor.add_to_schedule(task)
-                doctor.add_operation(task.patient)
-                doctor.remove_time(task.day, [task.hour])
-                break
+        if task.is_operation:
+            for doctor in Doctor.objects:
+                if task.hour in doctor.time_available.get(task.day, []):
+                    operation_urgency = determine_operation_urgency(task)  # Define this function based on your logic
+                    doctor.add_operation(task, operation_urgency)
+                    doctor.remove_time(task.day, [task.hour])
+                    break
+        else:
+            for doctor in Doctor.objects:
+                if task.hour in doctor.time_available.get(task.day, []):
+                    doctor.operations.append(task)
+                    doctor.remove_time(task.day, [task.hour])
+                    break
 
 @app.route('/schedule')
 def show_schedule():
-    hospital = Hospital("City Hospital", "12345")
-    # Example doctor and times
-    dr_smith = hospital.Doctor("Smith")
-    dr_smith.add_time("Monday", [9, 10, 11])
-    hospital.doctors["Smith"] = dr_smith
-
-    # Example patients and tasks
-    patients = [
-        Patient("John", "Doe", 30, "Male", "Flu symptoms", 2),
-        Patient("Jane", "Smith", 25, "Female", "Severe abdominal pain", 4),
-        Patient("Alice", "Johnson", 40, "Female", "Sprained ankle", 1),
-        Patient("Bob", "Williams", 55, "Male", "Chest pain", 4)
-    ]
-    tasks = [Task(patient, "Monday", 9 + i) for i, patient in enumerate(patients)]
+    # This is where you would initialize your Hospital, Doctors, and Patients
+    # For now, this is just a placeholder
+    hospital = Hospital.objects.first()  # Assuming you have a hospital in your database
+    tasks = Task.objects.all()
 
     schedule_tasks(hospital, tasks)
 
-    schedules = {}
-    for doctor in hospital.doctors.values():
-        schedules[doctor.name_doctor] = [(task.patient.first_name + " " + task.patient.last_name, task.day, task.hour) for task in doctor.schedule]
-
-    return schedules
+    # Format the schedule in a desired way for response
+    schedules = {doctor.name_doctor: doctor.operations for doctor in Doctor.objects}
+    return str(schedules)
 
 if __name__ == '__main__':
     app.run(debug=True)
