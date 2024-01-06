@@ -33,6 +33,12 @@ class Hospital:
             else:
                 print(f"Invalid day: {day}")
 
+        def remove_time(self, day: str, hours: list) -> None:
+            if day in self.time_available:
+                self.time_available[day] = [hour for hour in self.time_available[day] if hour not in hours]
+            else:
+                print(f"Invalid day: {day}")
+
 
 
 # TODO: 2. create the function for algorithm sorting (Yash)
