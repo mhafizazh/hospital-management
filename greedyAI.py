@@ -33,4 +33,4 @@ def machineLearning(text: str):
     return prediction
 
 
-print(machineLearning("I feel tired today"))
+
