@@ -133,6 +133,15 @@ def main():
     mongo_operations = MongoDBOperations("mongodb://localhost:27017/", "medical_database")
     mongo_operations.schedule_appointments()
 
+    # Fetch all patients
+    all_patients = mongo_operations.fetch_all_patients()
+    for patient, data in all_patients.items():
+        data["Age"] = "1"
+
+    # mongo_operations.update_entire_collection(all_patients)
+
+    for patient, data in all_patients.items():
+        print(patient, data)
 
 
 
