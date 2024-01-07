@@ -22,7 +22,16 @@
                 <input type="text" name="first_name" placeholder="Enter your first name here" required>
                 <input type="text" name="last_name" placeholder="Enter your last name here" required>
                 <input type="email" name="email" placeholder="Enter your email here" required>
-                <input type="text" name="availability" placeholder="Enter your availability here" required>
+                <select name="availability_days" multiple required>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                </select>
+                
                 <input type="text" name="operations" placeholder="Enter the operation here" required>
                 <button type="submit">Submit</button>
             </form>
@@ -34,12 +43,20 @@
     </footer>
 
     <script>
-        document.getElementById('adminForm').addEventListener('submit', function(e) {
+    document.getElementById('adminForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
+
+        // Get all selected availability days and store them in an array
+        const availabilityDays = Array.from(document.querySelector('[name="availability_days"]').selectedOptions).map(option => option.value);
+        
+        // Construct the data object including the 'availability' array
+        const data = Object.fromEntries(formData);
+        data.availability = availabilityDays;
+
         fetch('/doctors', {
             method: 'POST',
-            body: JSON.stringify(Object.fromEntries(formData)),
+            body: JSON.stringify(data),
             headers: {'Content-Type': 'application/json'}
         })
         .then(response => {

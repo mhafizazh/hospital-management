@@ -30,9 +30,25 @@
                 <input type="number" name="age" placeholder="Enter your age here" required><br>
                 <input type="tel" name="phone_number" placeholder="Enter your phone number here" required><br>
                 <textarea name="symptoms" placeholder="Enter your symptoms here" required></textarea><br>
-                <input type="text" name="availability" placeholder="Enter your availability here" required><br>
+                
+                <!-- Date Dropdown -->
+                <select name="availability_day" required>
+                    <option value="" disabled selected>Choose a day</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                </select>
+            
+                <!-- Time Input -->
+                <input type="text" name="availability_time" placeholder="Enter the time (24h format)" required><br>
+            
                 <button type="submit">Submit</button>
             </form>
+            
         </div>
     </main>
     <footer>
@@ -40,30 +56,43 @@
     </footer>
 
     <script>
-    document.getElementById('patientForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        fetch('/patients', {
-            method: 'POST',
-            body: JSON.stringify(Object.fromEntries(formData)),
-            headers: {'Content-Type': 'application/json'}
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error("Server response wasn't OK");
-            }
-        })
-        .then(data => {
-            console.log(data);
-            alert('Your response has been recorded');
-            window.location.reload(); // Reload the page
-        })
-        .catch(error => {
-            console.error('Error:', error);
+        document.getElementById('patientForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            // Combine day and time into one variable
+            const day = formData.get('availability_day');
+            const time = formData.get('availability_time');
+            const availability = `${day} ${time}`;
+
+            // Remove the day and time fields from formData
+            formData.delete('availability_day');
+            formData.delete('availability_time');
+
+            // Add the combined availability to the formData
+            formData.append('availability', availability);
+
+            fetch('/patients', {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error("Server response wasn't OK");
+                }
+            })
+            .then(data => {
+                console.log(data);
+                alert('Your response has been recorded');
+                window.location.reload(); // Reload the page
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         });
-    });
 
     </script>
 </body>

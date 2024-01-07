@@ -48,8 +48,19 @@ class Hospital:
 # TODO: 2. create the function for algorithm sorting (Yash)
 
 #TODO: For Hafiz to implement
-def format_availability(available_days):
-    return {"Monday": [1, 2, 3], "Wednesday": [12, 13, 14, 15]}
+def doctor_format_availability(data):
+    # return a dict like this {"Monday": [1, 2, 3], "Wednesday": [12, 13, 14, 15]}
+    work_hour = [num for num in range(9, 18)]
+    formatted_work_hour = {}
+    for day in data['availability']:
+        formatted_work_hour[f"{day}"] = work_hour
+
+    return formatted_work_hour
+
+def patient_format_availability(data):
+    availability = data.split(" ")
+    return {availability[0]: [availability[1]]}
+    
 
 @app.route('/')
 def home():
@@ -65,11 +76,11 @@ def add_patient():
     print(data)  # For debugging, print the data to the console
     
     # return a dict like this {"Monday": [1, 2, 3], "Wednesday": [12, 13, 14, 15]}
-    formatted_data = format_availability(data['availability'])
+    formatted_data = patient_format_availability(data['availability'])
 
     #TODO: availability
     if request.method == 'POST':
-            # Prepare the document to insert
+        # Prepare the document to insert
         patient_document = {
             "First_name": data['first_name'],
             "Last_name": data['last_name'],
@@ -83,8 +94,8 @@ def add_patient():
         # Insert into the MongoDB collection
         mongo.db.patients.insert_one(patient_document)
 
-    # Here, you would normally process the data and insert it into the database
-    print(list(mongo.db.patients.find()))
+    # # Here, you would normally process the data and insert it into the database
+    # print(list(mongo.db.patients.find()))
     return jsonify({'msg': 'Patient added successfully'}) 
 
 @app.route("/admin_form")
@@ -95,13 +106,16 @@ def login():
 def add_doctor():
     if request.method == 'POST':
         data = request.json
-        formatted_data = format_availability(data)
+
+        # Doctor have a fixed time based on the day that they willing to work
+        formatted_date = doctor_format_availability(data)
+
         # Example doctor document
         doctor_document = {
             "First_name": data['first_name'],
             "Last_name": data['last_name'],
             "Email": data['email'],
-            "Availability": formatted_data,
+            "Availability": formatted_date,
             "Operations": data['operations']
         }
 

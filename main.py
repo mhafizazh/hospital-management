@@ -1,8 +1,9 @@
-# TODO: pull all the data down, use the authorize api from google calendar to send to the doctor to authorize, then add or delete task thing with it!
-# TODO: OTHER: log in page for admin
+#UPDATE
 from pymongo import MongoClient
 from bson import ObjectId
 from classes import Patient,Hospital
+
+import random
 
 class MongoDBOperations:
     def __init__(self, uri, db_name):
@@ -50,8 +51,12 @@ class MongoDBOperations:
             if changes:
                 self.db.patients.update_one({'_id': oid}, {'$set': changes})
 
-    def update_doctor(self, doctor_id, update_data):
-        result = self.db.doctors.update_one({'_id': ObjectId(doctor_id)}, {'$set': update_data})
+    def update_doctor(self, doctor_name, update_data):
+        # doctor_name is expected to be a dictionary with 'First_name' and 'Last_name'
+        result = self.db.doctors.update_one(
+            {'Last_name': doctor_name['Last_name']},
+            {'$set': update_data}
+        )
         return result.matched_count, result.modified_count
 
     def update_doctor_collection(self, updated_data):
@@ -70,21 +75,29 @@ class MongoDBOperations:
                 self.db.doctors.update_one({'_id': oid}, {'$set': changes})
     
     def schedule_appointments(self):
-    # Fetch all patients and create Patient instances
+        # Fetch all patients and create Patient instances
         patients_cursor = self.db.patients.find()
-        patients = [Patient(patient_data['first_name'], 
-                            patient_data['last_name'], 
-                            patient_data['age'], 
-                            patient_data['gender'], 
-                            patient_data['symptoms'], 
-                            patient_data['urgency_rating']) for patient_data in patients_cursor]
+        patients = [Patient(patient_data['First_name'], 
+                            patient_data['Last_name'],
+                            patient_data['Phone_number'],
+                            patient_data['Gender'], 
+                            patient_data['Age'], 
+                            patient_data['Availability'],
+                            patient_data['Symptoms'], 
+                            urgency_rating=0) for patient_data in patients_cursor]
+
+        # Set urgency ratings for each patient
+        for patient in patients:
+            # patient.function_greed()
+            patient.urgency_rating = random.randint(0, 1)
+
 
         # Sort patients by urgency rating in descending order
         patients.sort(key=lambda x: x.urgency_rating, reverse=True)
 
         # Fetch all doctors and create Doctor instances
         doctors_cursor = self.db.doctors.find()
-        doctors = [Hospital.Doctor(doctor_data['name_doctor'], doctor_data['time_available']) for doctor_data in doctors_cursor]
+        doctors = [Hospital.Doctor(doctor_data['First_name'], doctor_data['Last_name'], doctor_data['Availability'], doctor_data['Operations']) for doctor_data in doctors_cursor]
 
         # Initialize a schedule dictionary
         schedule = {}
@@ -94,54 +107,47 @@ class MongoDBOperations:
             for doctor in doctors:
                 # Find a matching slot where both doctor and patient are available
                 for day, hours in doctor.time_available.items():
-                    # Assuming patient.availability is a dictionary with days and available hours
-                    patient_available_hours = patient.availability.get(day, [])
-                    # Find the first common hour that both patient and doctor are available
-                    common_hour = next((hour for hour in hours if hour in patient_available_hours), None)
-                    if common_hour is not None:
+                    patient_available_hours = int(list(patient.availability.values())[0][0].split(":")[0])
+
+                    # common_hour = next((hour for hour in hours if hour in patient_available_hours), None)
+                    if patient_available_hours is not None:
                         # Schedule the appointment
                         appointment = {
-                            'patient_id': patient.patient_id,  # Assuming Patient class has patient_id attribute
-                            'doctor_id': doctor.doctor_id,  # Assuming Doctor class has doctor_id attribute
+                            'patient_name': f"{patient.first_name} {patient.last_name}",
+                            'doctor_name': f"{doctor.last_name}",  
                             'day': day,
-                            'hour': common_hour,
+                            'hour': patient_available_hours,
                             'urgency': patient.urgency_rating
                         }
-                        self.db.appointments.insert_one(appointment)  # Assuming there is an appointments collection
+                        self.db.appointments.insert_one(appointment)
 
                         # Update doctor's availability in the database
-                        doctor.remove_time(day, [common_hour])
-                        self.update_doctor(doctor.doctor_id, {'time_available': doctor.time_available})
+                        doctor.remove_time(day, [patient_available_hours])
+                        self.update_doctor({'Last_name': doctor.last_name}, {'time_available': doctor.time_available})
 
                         # Add appointment to schedule dictionary
-                        if doctor.name_doctor not in schedule:
-                            schedule[doctor.name_doctor] = []
-                        schedule[doctor.name_doctor].append(appointment)
+                        doctor_full_name = f"{doctor.last_name}"
+                        if doctor_full_name not in schedule:
+                            schedule[doctor_full_name] = []
+                        schedule[doctor_full_name].append(appointment)
 
                         # No need to look for other slots for this patient
                         break
-         # Print the schedule
-        for doctor_name, appointments in schedule.items():
-            print(f"Schedule for Dr. {doctor_name}:")
+
+        # Print the schedule
+        for doctor_full_name, appointments in schedule.items():
+            print(f"Schedule for Dr. {doctor_full_name}:")
             for appt in appointments:
-                patient_info = self.db.patients.find_one({'_id': ObjectId(appt['patient_id'])})
-                print(f"  Patient: {patient_info['first_name']} {patient_info['last_name']} - {appt['day']} at {appt['hour']}:00 - Urgency: {appt['urgency']}")
+                print(f"  Patient: {appt['patient_name']} - {appt['day']} at {appt['hour']}:00 - Urgency: {appt['urgency']}")
             print("\n")
+
 
 
 def main():
     mongo_operations = MongoDBOperations("mongodb://localhost:27017/", "medical_database")
     mongo_operations.schedule_appointments()
 
-    # Fetch all patients
-    all_patients = mongo_operations.fetch_all_patients()
-    for patient, data in all_patients.items():
-        data["Age"] = "1"
 
-    # mongo_operations.update_entire_collection(all_patients)
-
-    for patient, data in all_patients.items():
-        print(patient, data)
 
 
 
