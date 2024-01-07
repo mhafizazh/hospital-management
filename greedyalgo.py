@@ -49,6 +49,8 @@ class Patient:
         self.symptoms = symptoms
         self.urgency_rating = urgency_rating
 
+    def greedyAI(self):
+
 class Task:
     def __init__(self, patient, day, hour):
         self.patient = patient

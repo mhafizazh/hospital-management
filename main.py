@@ -1,9 +1,9 @@
 # TODO: pull all the data down, use the authorize api from google calendar to send to the doctor to authorize, then add or delete task thing with it!
 # TODO: OTHER: log in page for admin
-
-
 from pymongo import MongoClient
 from bson import ObjectId
+import classes
+import greedyAI
 
 class MongoDBOperations:
     def __init__(self, uri, db_name):
@@ -69,6 +69,9 @@ class MongoDBOperations:
             # Update document if there are changes
             if changes:
                 self.db.doctors.update_one({'_id': oid}, {'$set': changes})
+
+def function_greed(text: str):
+    return greedyAI.machineLearning(text=text)
 
 
 def main():

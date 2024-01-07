@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, redirect
 from flask_pymongo import PyMongo
 from bson import ObjectId
 
+
 app = Flask(__name__, template_folder= "./templates", static_folder = './templates/static')
 app.config["MONGO_URI"] = "mongodb://localhost:27017/medical_database"
 mongo = PyMongo(app)
