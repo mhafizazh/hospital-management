@@ -6,8 +6,42 @@ app = Flask(__name__, template_folder= "./templates", static_folder = './templat
 app.config["MONGO_URI"] = "mongodb://localhost:27017/medical_database"
 mongo = PyMongo(app)
 
-
 # TODO: 1. create class object that can create the hospital and it's doctors (Hafiz)
+class Hospital:
+    def __init__(self, name_hospital, postal_code, doctors):
+        self.name_hospital = name_hospital
+        self.postal_code = postal_code
+        self.doctors = {}
+
+    class Doctor:
+        def __init__(self, name_doctor: str, time_available: dict):
+            self.name_doctor = name_doctor
+            self.time_available = {
+                "Monday": [],
+                "Tuesday": [],
+                "Wednesday": [],
+                "Thursday": [],
+                "Friday": [],
+                "Saturday": [],
+                "Sunday": [],
+            }
+
+        def add_time(self, day: str, hours:list) -> None:
+            # Ensure the day is a valid key in the dictionary
+            if day in self.time_available:
+                # Filter out any hours not in the range 1-24
+                valid_hours = [hour for hour in hours if 1 <= hour <= 24]
+                # Add these hours to the time available for the specified day
+                self.time_available[day].extend(valid_hours)
+            else:
+                print(f"Invalid day: {day}")
+
+        def remove_time(self, day: str, hours: list) -> None:
+            if day in self.time_available:
+                self.time_available[day] = [hour for hour in self.time_available[day] if hour not in hours]
+            else:
+                print(f"Invalid day: {day}")
+
 
 
 # TODO: 2. create the function for algorithm sorting (Yash)
@@ -73,6 +107,7 @@ def add_doctor():
     # Insert into the MongoDB collection
     mongo.db.doctors.insert_one(doctor_document)
     return jsonify({'msg': 'Doctor added successfully'}) 
+
 
 if __name__ == '__main__':
     app.run(debug=True)
