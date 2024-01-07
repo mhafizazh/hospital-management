@@ -51,6 +51,25 @@ class MongoDBOperations:
             if changes:
                 self.db.patients.update_one({'_id': oid}, {'$set': changes})
 
+    def update_doctor(self, doctor_id, update_data):
+        result = self.db.doctors.update_one({'_id': ObjectId(doctor_id)}, {'$set': update_data})
+        return result.matched_count, result.modified_count
+
+    def update_doctor_collection(self, updated_data):
+        for doctor_id, data in updated_data.items():
+            # Convert string doctor_id back to ObjectId
+            oid = ObjectId(doctor_id)
+
+            # Fetch the current data for comparison
+            current_data = self.db.doctors.find_one({'_id': oid})
+
+            # Determine changes
+            changes = {k: v for k, v in data.items() if current_data.get(k) != v}
+
+            # Update document if there are changes
+            if changes:
+                self.db.doctors.update_one({'_id': oid}, {'$set': changes})
+
 
 def main():
     mongo_operations = MongoDBOperations("mongodb://localhost:27017/", "medical_database")
