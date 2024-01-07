@@ -55,18 +55,3 @@ class Task:
         self.urgency = patient.urgency_rating
         self.day = day
         self.hour = hour
-
-
-# Assuming the Patient class is defined as you provided
-
-# Create a Patient instance
-patient = Patient("John", "Doe", 30, "Male", "I have knife inside my head", 0)
-
-# Display initial urgency rating
-print(f"Initial Urgency Rating: {patient.urgency_rating}")
-
-# Call the function_greed method to update urgency rating
-patient.function_greed()
-
-# Display updated urgency rating
-print(f"Updated Urgency Rating: {patient.urgency_rating}")

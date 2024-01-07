@@ -86,6 +86,9 @@ class MongoDBOperations:
         doctors_cursor = self.db.doctors.find()
         doctors = [Hospital.Doctor(doctor_data['name_doctor'], doctor_data['time_available']) for doctor_data in doctors_cursor]
 
+        # Initialize a schedule dictionary
+        schedule = {}
+
         # Schedule appointments based on doctor and patient availability and urgency
         for patient in patients:
             for doctor in doctors:
@@ -110,23 +113,26 @@ class MongoDBOperations:
                         doctor.remove_time(day, [common_hour])
                         self.update_doctor(doctor.doctor_id, {'time_available': doctor.time_available})
 
+                        # Add appointment to schedule dictionary
+                        if doctor.name_doctor not in schedule:
+                            schedule[doctor.name_doctor] = []
+                        schedule[doctor.name_doctor].append(appointment)
+
                         # No need to look for other slots for this patient
                         break
+         # Print the schedule
+        for doctor_name, appointments in schedule.items():
+            print(f"Schedule for Dr. {doctor_name}:")
+            for appt in appointments:
+                patient_info = self.db.patients.find_one({'_id': ObjectId(appt['patient_id'])})
+                print(f"  Patient: {patient_info['first_name']} {patient_info['last_name']} - {appt['day']} at {appt['hour']}:00 - Urgency: {appt['urgency']}")
+            print("\n")
 
 
 def main():
     mongo_operations = MongoDBOperations("mongodb://localhost:27017/", "medical_database")
     mongo_operations.schedule_appointments()
 
-    # Fetch all patients
-    all_patients = mongo_operations.fetch_all_patients()
-    for patient, data in all_patients.items():
-        data["Age"] = "1"
-
-    # mongo_operations.update_entire_collection(all_patients)
-
-    for patient, data in all_patients.items():
-        print(patient, data)
 
 
 
