@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Form</title>
+</head>
+<body>
+    <h2>Patient Form</h2>
+    <form id="patientForm">
+        First Name: <input type="text" name="first_name"><br>
+        Last Name: <input type="text" name="last_name"><br>
+        Gender: <input type="text" name="gender"><br>
+        Priority Level: <input type="number" name="priority_level"><br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <h2>Doctor Form</h2>
+    <form id="doctorForm">
+        First Name: <input type="text" name="first_name"><br>
+        Last Name: <input type="text" name="last_name"><br>
+        Current Operation: <input type="text" name="current_operation"><br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <script>
+        // JavaScript to handle form submission
+        document.getElementById('patientForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/patients', {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {'Content-Type': 'application/json'}
+            }).then(response => response.json()).then(data => console.log(data));
+        });
+
+        document.getElementById('doctorForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/doctors', {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {'Content-Type': 'application/json'}
+            }).then(response => response.json()).then(data => console.log(data));
+        });
+    </script>
+</body>
+</html>
