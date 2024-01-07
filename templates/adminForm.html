@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Forum</title>
+    <link rel="stylesheet" href="static/form.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/admin_form" class="active">Admin Form</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <div class="form-container">
+            <h1>Admin Form</h1>
+            <form id="adminForm">
+                <input type="text" name="first_name" placeholder="Enter your first name here" required>
+                <input type="text" name="last_name" placeholder="Enter your last name here" required>
+                <input type="email" name="email" placeholder="Enter your email here" required>
+                <input type="text" name="availability" placeholder="Enter your availability here" required>
+                <input type="text" name="operations" placeholder="Enter the operation here" required>
+                <button type="submit">Submit</button>
+            </form>
+            
+        </div>
+    </main>
+    <footer>
+        <p>© 2024 Hospital Management System</p>
+    </footer>
+
+    <script>
+        document.getElementById('adminForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/doctors', {
+            method: 'POST',
+            body: JSON.stringify(Object.fromEntries(formData)),
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error("Server response wasn't OK");
+            }
+        })
+        .then(data => {
+            console.log(data);
+            alert('Your response has been recorded');
+            window.location.reload(); // Reload the page
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    </script>
+</body>
+</html>
