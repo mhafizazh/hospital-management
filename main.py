@@ -2,8 +2,7 @@
 # TODO: OTHER: log in page for admin
 from pymongo import MongoClient
 from bson import ObjectId
-import classes
-import greedyAI
+from classes import Patient,Hospital
 
 class MongoDBOperations:
     def __init__(self, uri, db_name):
@@ -69,13 +68,55 @@ class MongoDBOperations:
             # Update document if there are changes
             if changes:
                 self.db.doctors.update_one({'_id': oid}, {'$set': changes})
+    
+    def schedule_appointments(self):
+    # Fetch all patients and create Patient instances
+        patients_cursor = self.db.patients.find()
+        patients = [Patient(patient_data['first_name'], 
+                            patient_data['last_name'], 
+                            patient_data['age'], 
+                            patient_data['gender'], 
+                            patient_data['symptoms'], 
+                            patient_data['urgency_rating']) for patient_data in patients_cursor]
 
-def function_greed(text: str):
-    return greedyAI.machineLearning(text=text)
+        # Sort patients by urgency rating in descending order
+        patients.sort(key=lambda x: x.urgency_rating, reverse=True)
+
+        # Fetch all doctors and create Doctor instances
+        doctors_cursor = self.db.doctors.find()
+        doctors = [Hospital.Doctor(doctor_data['name_doctor'], doctor_data['time_available']) for doctor_data in doctors_cursor]
+
+        # Schedule appointments based on doctor and patient availability and urgency
+        for patient in patients:
+            for doctor in doctors:
+                # Find a matching slot where both doctor and patient are available
+                for day, hours in doctor.time_available.items():
+                    # Assuming patient.availability is a dictionary with days and available hours
+                    patient_available_hours = patient.availability.get(day, [])
+                    # Find the first common hour that both patient and doctor are available
+                    common_hour = next((hour for hour in hours if hour in patient_available_hours), None)
+                    if common_hour is not None:
+                        # Schedule the appointment
+                        appointment = {
+                            'patient_id': patient.patient_id,  # Assuming Patient class has patient_id attribute
+                            'doctor_id': doctor.doctor_id,  # Assuming Doctor class has doctor_id attribute
+                            'day': day,
+                            'hour': common_hour,
+                            'urgency': patient.urgency_rating
+                        }
+                        self.db.appointments.insert_one(appointment)  # Assuming there is an appointments collection
+
+                        # Update doctor's availability in the database
+                        doctor.remove_time(day, [common_hour])
+                        self.update_doctor(doctor.doctor_id, {'time_available': doctor.time_available})
+
+                        # No need to look for other slots for this patient
+                        break
 
 
 def main():
     mongo_operations = MongoDBOperations("mongodb://localhost:27017/", "medical_database")
+    mongo_operations.schedule_appointments()
 
     # Fetch all patients
     all_patients = mongo_operations.fetch_all_patients()
